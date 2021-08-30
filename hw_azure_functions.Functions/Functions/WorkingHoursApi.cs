@@ -16,6 +16,9 @@ namespace hw_azure_functions.Functions.Functions
 {
     public static class WorkingHoursApi
     {
+        /*
+         * Function to create and Entry
+         */
         [FunctionName(nameof(CreateEntry))]
         public static async Task<IActionResult> CreateEntry(
             [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "entry")] HttpRequest req,
@@ -28,7 +31,7 @@ namespace hw_azure_functions.Functions.Functions
             string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
             WorkingHoursEntry workingHoursEntry = JsonConvert.DeserializeObject<WorkingHoursEntry>(requestBody);
 
-            if (string.IsNullOrEmpty(workingHoursEntry?.RecordDate.ToString()) || workingHoursEntry?.RecordDate.ToString() == "0")
+            if (string.IsNullOrEmpty(workingHoursEntry?.EmployeeId.ToString()) || workingHoursEntry?.EmployeeId.ToString() == "0")
             {
                 return new BadRequestObjectResult(new Response
                 {
@@ -44,8 +47,8 @@ namespace hw_azure_functions.Functions.Functions
             WorkingHoursEntity workingHoursEntity = new WorkingHoursEntity
             {
                 EmployeeId = workingHoursEntry.EmployeeId,
-                RecordDate = DateTime.UtcNow,
-                RecordType = EntryType,
+                RecordDate = workingHoursEntry.RecordDate,
+                RecordType = workingHoursEntry.RecordType,
                 Consolidated = false,
                 ETag = "*",
                 PartitionKey = "WORKINGHOURS",
@@ -56,6 +59,59 @@ namespace hw_azure_functions.Functions.Functions
             await workingHoursTable.ExecuteAsync(addOperation);
 
             string message = "New timestamp store in table.";
+            log.LogInformation(message);
+
+            return new OkObjectResult(new Response
+            {
+                IsSuccess = true,
+                Message = message,
+                Result = workingHoursEntity
+            });
+        }
+
+        /*
+         * Function to update and Entry
+         */
+        [FunctionName(nameof(UpdateEntry))]
+        public static async Task<IActionResult> UpdateEntry(
+            [HttpTrigger(AuthorizationLevel.Anonymous, "put", Route = "entry/{id}")] HttpRequest req,
+            [Table("workinghours", Connection = "AzureWebJobsStorage")] CloudTable workingHoursTable,
+            string id,
+            ILogger log)
+        {
+            log.LogInformation($"Update request for entry with employee id {id} received.");
+
+            string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
+            WorkingHoursEntry workingHoursEntry = JsonConvert.DeserializeObject<WorkingHoursEntry>(requestBody);
+
+            /*
+             * Validate employee id
+             */
+            TableOperation findOperantion = TableOperation.Retrieve<WorkingHoursEntity>("WORKINGHOURS", id);
+            TableResult findResult = await workingHoursTable.ExecuteAsync(findOperantion);
+
+            if (findResult == null)
+            {
+                return new BadRequestObjectResult(new Response
+                {
+                    IsSuccess = false,
+                    Message = "EmployeeId not found."
+                });
+            }
+
+            //Update entry
+            WorkingHoursEntity workingHoursEntity = (WorkingHoursEntity)findResult.Result;
+
+            if (!string.IsNullOrEmpty(workingHoursEntry?.RecordDate.ToString()))
+            {
+                workingHoursEntity.RecordDate = workingHoursEntry.RecordDate;
+                workingHoursEntity.RecordType = workingHoursEntry.RecordType;
+            }
+
+            TableOperation editOperation = TableOperation.Replace(workingHoursEntity);
+            await workingHoursTable.ExecuteAsync(editOperation);
+
+            string message = $"Record entry with employee id {id} updated in table.";
             log.LogInformation(message);
 
             return new OkObjectResult(new Response
