@@ -145,5 +145,37 @@ namespace hw_azure_functions.Functions.Functions
             });
         }
 
+        /*
+         * Function to get entry by Id
+         */
+        [FunctionName(nameof(GetEntryById))]
+        public static IActionResult GetEntryById(
+            [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "entry/{id}")] HttpRequest req,
+            [Table("workinghours","WORKINGHOURS", "{id}", Connection = "AzureWebJobsStorage")] WorkingHoursEntity workingHoursEntity,
+            string id,
+            ILogger log)
+        {
+            log.LogInformation($"Get entry by id {id} received.");
+
+            if (workingHoursEntity == null)
+            {
+                return new BadRequestObjectResult(new Response
+                {
+                    IsSuccess = false,
+                    Message = "Entry not found"
+                });
+            }
+
+
+            string message = $"Entry id {id} Retrieved.";
+            log.LogInformation(message);
+
+            return new OkObjectResult(new Response
+            {
+                IsSuccess = true,
+                Message = message,
+                Result = workingHoursEntity
+            });
+        }
     }
 }
