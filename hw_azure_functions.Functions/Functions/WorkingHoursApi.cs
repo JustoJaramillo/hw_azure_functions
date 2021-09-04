@@ -40,10 +40,6 @@ namespace hw_azure_functions.Functions.Functions
                 });
             }
 
-            //this variable must be define as metodo to evaluete if it is an entry entry=false or an exit entry=true
-            //by now it will work as false with the purpose of create the api endpoint to create entry records for employees
-            bool EntryType = false;
-
             WorkingHoursEntity workingHoursEntity = new WorkingHoursEntity
             {
                 EmployeeId = workingHoursEntry.EmployeeId,
@@ -121,5 +117,33 @@ namespace hw_azure_functions.Functions.Functions
                 Result = workingHoursEntity
             });
         }
+
+        /*
+         * Function to get all entries
+         */
+        [FunctionName(nameof(GetAllEntries))]
+        public static async Task<IActionResult> GetAllEntries(
+            [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "entry")] HttpRequest req,
+            [Table("workinghours", Connection = "AzureWebJobsStorage")] CloudTable workingHoursTable,
+            ILogger log)
+        {
+            log.LogInformation("Get all entries received.");
+
+
+            TableQuery<WorkingHoursEntity> query = new TableQuery<WorkingHoursEntity>();
+            TableQuerySegment<WorkingHoursEntity> entries = await workingHoursTable.ExecuteQuerySegmentedAsync(query, null);
+            
+
+            string message = "Retrieve all entries.";
+            log.LogInformation(message);
+
+            return new OkObjectResult(new Response
+            {
+                IsSuccess = true,
+                Message = message,
+                Result = entries
+            });
+        }
+
     }
 }
