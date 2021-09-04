@@ -177,5 +177,40 @@ namespace hw_azure_functions.Functions.Functions
                 Result = workingHoursEntity
             });
         }
+
+
+        /*
+          * Function to get entry by Id
+          */
+        [FunctionName(nameof(DeleteEntryById))]
+        public static async Task<IActionResult> DeleteEntryById(
+            [HttpTrigger(AuthorizationLevel.Anonymous, "delete", Route = "entry/{id}")] HttpRequest req,
+            [Table("workinghours", "WORKINGHOURS", "{id}", Connection = "AzureWebJobsStorage")] WorkingHoursEntity workingHoursEntity,
+            [Table("workinghours", Connection = "AzureWebJobsStorage")] CloudTable workingHoursTable,
+            string id,
+            ILogger log)
+        {
+            log.LogInformation($"Delete entry by id {id} received.");
+
+            if (workingHoursEntity == null)
+            {
+                return new BadRequestObjectResult(new Response
+                {
+                    IsSuccess = false,
+                    Message = "Entry not found"
+                });
+            }
+
+            await workingHoursTable.ExecuteAsync(TableOperation.Delete(workingHoursEntity));
+            string message = $"Entry id {workingHoursEntity.RowKey} deleted.";
+            log.LogInformation(message);
+
+            return new OkObjectResult(new Response
+            {
+                IsSuccess = true,
+                Message = message,
+                Result = workingHoursEntity
+            });
+        }
     }
 }
