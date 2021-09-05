@@ -1,16 +1,18 @@
-using System;
-using System.IO;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.Azure.WebJobs;
-using Microsoft.Azure.WebJobs.Extensions.Http;
-using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
-using Microsoft.WindowsAzure.Storage.Table;
 using hw_azure_functions.Common.Models;
 using hw_azure_functions.Common.Responses;
 using hw_azure_functions.Functions.Entities;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Azure.WebJobs;
+using Microsoft.Azure.WebJobs.Extensions.Http;
+using Microsoft.Extensions.Logging;
+using Microsoft.WindowsAzure.Storage.Table;
+using Newtonsoft.Json;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace hw_azure_functions.Functions.Functions
 {
@@ -132,7 +134,7 @@ namespace hw_azure_functions.Functions.Functions
 
             TableQuery<WorkingHoursEntity> query = new TableQuery<WorkingHoursEntity>();
             TableQuerySegment<WorkingHoursEntity> entries = await workingHoursTable.ExecuteQuerySegmentedAsync(query, null);
-            
+
 
             string message = "Retrieve all entries.";
             log.LogInformation(message);
@@ -151,7 +153,7 @@ namespace hw_azure_functions.Functions.Functions
         [FunctionName(nameof(GetEntryById))]
         public static IActionResult GetEntryById(
             [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "entry/{id}")] HttpRequest req,
-            [Table("workinghours","WORKINGHOURS", "{id}", Connection = "AzureWebJobsStorage")] WorkingHoursEntity workingHoursEntity,
+            [Table("workinghours", "WORKINGHOURS", "{id}", Connection = "AzureWebJobsStorage")] WorkingHoursEntity workingHoursEntity,
             string id,
             ILogger log)
         {
@@ -210,6 +212,148 @@ namespace hw_azure_functions.Functions.Functions
                 IsSuccess = true,
                 Message = message,
                 Result = workingHoursEntity
+            });
+        }
+
+
+        /*
+         * Function to get consolidate
+         */
+        [FunctionName(nameof(GetTotalTime))]
+        public static async Task<IActionResult> GetTotalTime(
+            [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "totaltime")] HttpRequest req,
+            [Table("totaltimeworked", Connection = "AzureWebJobsStorage")] CloudTable totalTimeWorkedTable,
+            ILogger log)
+        {
+            log.LogInformation("Get all consoildated received.");
+
+            string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
+            TotalTimeWorked totalTimeWorked = JsonConvert.DeserializeObject<TotalTimeWorked>(requestBody);
+
+            string filterDate = TableQuery.GenerateFilterConditionForDate("Date", QueryComparisons.Equal, DateTime.Parse(totalTimeWorked.Date.ToString()));
+            TableQuery<TotalTimeWorkedEntity> query = new TableQuery<TotalTimeWorkedEntity>().Where(filterDate);
+            TableQuerySegment<TotalTimeWorkedEntity> consolidate = await totalTimeWorkedTable.ExecuteQuerySegmentedAsync(query, null);
+
+            string message = "Retrieve all consolidate records.";
+            log.LogInformation(message);
+
+            return new OkObjectResult(new Response
+            {
+                IsSuccess = true,
+                Message = message,
+                Result = consolidate
+            });
+        }
+
+
+
+
+
+
+
+
+
+
+
+
+        /*
+         * Function consolidated
+         */
+        [FunctionName(nameof(Scheduled))]
+        public static async Task<IActionResult> Scheduled(
+            [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "sc")] HttpRequest req,
+            [Table("workinghours", Connection = "AzureWebJobsStorage")] CloudTable workingHoursTable,
+            [Table("totaltimeworked", Connection = "AzureWebJobsStorage")] CloudTable totalTimeWorkedTable,
+            ILogger log)
+        {
+            log.LogInformation($"Consolidating functions executed at: {DateTime.UtcNow}.");
+
+
+            string filterEmployees = TableQuery.GenerateFilterConditionForBool("Consolidated", QueryComparisons.Equal, false);
+            TableQuery<WorkingHoursEntity> query = new TableQuery<WorkingHoursEntity>().Where(filterEmployees);
+            TableQuerySegment<WorkingHoursEntity> entries = await workingHoursTable.ExecuteQuerySegmentedAsync(query, null);
+            List<WorkingHoursEntity> orderedEntries = entries.OrderBy(x => x.EmployeeId).ThenBy(x => x.RecordDate).ToList();
+
+            string prueba = "Marica";
+
+            int totalRecordsConsolidaded = 0;
+            if (orderedEntries.Count > 1)
+            {
+                
+                for (int i = 0; i < orderedEntries.Count;)
+                {
+                    if (orderedEntries.Count == i)
+                    {
+                        prueba = "Break";
+                        break;
+                    }
+
+                    if (orderedEntries[i].RecordType == true && orderedEntries[i + 1].RecordType == false) {
+                        i++;
+                        continue;
+                    }
+
+                        if (orderedEntries[i].EmployeeId == orderedEntries[i + 1].EmployeeId)
+                    {
+                        totalRecordsConsolidaded++;
+                        string filterEmployeeId = TableQuery.GenerateFilterConditionForInt("EmployeeId", QueryComparisons.Equal, orderedEntries[i].EmployeeId);
+                        TableQuery<TotalTimeWorkedEntity> queryByEmployeeId = new TableQuery<TotalTimeWorkedEntity>().Where(filterEmployeeId);
+                        TableQuerySegment<TotalTimeWorkedEntity> totalTimeWorked = await totalTimeWorkedTable.ExecuteQuerySegmentedAsync(queryByEmployeeId, null);
+                        List<TotalTimeWorkedEntity> total = totalTimeWorked.Results;
+
+                        TimeSpan timeMesure = (orderedEntries[i + 1].RecordDate - orderedEntries[i].RecordDate);
+                        DateTime dayDate = new DateTime(orderedEntries[i].RecordDate.Year, orderedEntries[i].RecordDate.Month, orderedEntries[i].RecordDate.Day);
+
+                        TotalTimeWorkedEntity totalTimeWorkedEntity = new TotalTimeWorkedEntity
+                        {
+                            EmployeeId = orderedEntries[i].EmployeeId,
+                            Date = dayDate,
+                            MinutesWorked = (int)timeMesure.TotalMinutes,
+                            ETag = "*",
+                            PartitionKey = "TOTALTIMEWORKED",
+                            RowKey = Guid.NewGuid().ToString()
+                        };
+
+                        WorkingHoursEntity workingHoursEntity = new WorkingHoursEntity();
+
+                        TableResult findFirstRecord = await workingHoursTable.ExecuteAsync(TableOperation.Retrieve<WorkingHoursEntity>("WORKINGHOURS", orderedEntries[i].RowKey));
+                        workingHoursEntity = (WorkingHoursEntity)findFirstRecord.Result;
+                        workingHoursEntity.Consolidated = true;
+                        _ = await workingHoursTable.ExecuteAsync(TableOperation.Replace(workingHoursEntity));
+
+                        TableResult findSecondRecord = await workingHoursTable.ExecuteAsync(TableOperation.Retrieve<WorkingHoursEntity>("WORKINGHOURS", orderedEntries[i + 1].RowKey));
+                        workingHoursEntity = (WorkingHoursEntity)findSecondRecord.Result;
+                        workingHoursEntity.Consolidated = true;
+                        _ = await workingHoursTable.ExecuteAsync(TableOperation.Replace(workingHoursEntity));
+
+                        if (totalTimeWorked.Results.Count == 0)
+                        {
+                            _ = await totalTimeWorkedTable.ExecuteAsync(TableOperation.Insert(totalTimeWorkedEntity));
+                        }
+                        else
+                        {
+                            TableResult findEmployeeRecord = await totalTimeWorkedTable.ExecuteAsync(TableOperation.Retrieve<TotalTimeWorkedEntity>("TOTALTIMEWORKED", totalTimeWorked.Results.ElementAt(0).RowKey));
+                            totalTimeWorkedEntity = (TotalTimeWorkedEntity)findEmployeeRecord.Result;
+                            totalTimeWorkedEntity.MinutesWorked += (int)timeMesure.TotalMinutes;
+                            _ = await totalTimeWorkedTable.ExecuteAsync(TableOperation.Replace(totalTimeWorkedEntity));
+                        }
+
+
+
+                    }
+                    i++;
+                }
+            }
+
+
+            string message = $"Total records consolidated {totalRecordsConsolidaded} at: {DateTime.UtcNow}.";
+            log.LogInformation(message);
+
+            return new OkObjectResult(new Response
+            {
+                IsSuccess = true,
+                Message = message,
+                Result = prueba
             });
         }
     }

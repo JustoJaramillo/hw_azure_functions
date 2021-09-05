@@ -3,11 +3,11 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.31624.102
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "hw_azure_functions.Common", "hw_azure_functions.Common\hw_azure_functions.Common.csproj", "{D5605852-0245-48DB-8255-AAFC18947FA4}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "hw_azure_functions.Common", "hw_azure_functions.Common\hw_azure_functions.Common.csproj", "{D5605852-0245-48DB-8255-AAFC18947FA4}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "hw_azure_functions.Functions", "hw_azure_functions.Functions\hw_azure_functions.Functions.csproj", "{6EE0FBCA-F88E-42F1-A8F2-0C53C1A07F66}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "hw_azure_functions.Functions", "hw_azure_functions.Functions\hw_azure_functions.Functions.csproj", "{6EE0FBCA-F88E-42F1-A8F2-0C53C1A07F66}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "hw_azure_functions.Test", "hw_azure_functions.Test\hw_azure_functions.Test.csproj", "{28BFF4EC-7272-41C9-9089-A829232AB229}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "hw_azure_functions.Test", "hw_azure_functions.Test\hw_azure_functions.Test.csproj", "{28BFF4EC-7272-41C9-9089-A829232AB229}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
