@@ -30,7 +30,6 @@ namespace hw_azure_functions.Functions.Functions
             TableQuerySegment<WorkingHoursEntity> entries = await workingHoursTable.ExecuteQuerySegmentedAsync(query, null);
             List<WorkingHoursEntity> orderedEntries = entries.OrderBy(x => x.EmployeeId).ThenBy(x => x.RecordDate).ToList();
 
-            string prueba = "Marica";
 
             int totalRecordsConsolidaded = 0;
             if (orderedEntries.Count > 1)
@@ -38,9 +37,8 @@ namespace hw_azure_functions.Functions.Functions
 
                 for (int i = 0; i < orderedEntries.Count;)
                 {
-                    if (orderedEntries.Count == i)
+                    if (orderedEntries.Count == i + 1)
                     {
-                        prueba = "Break";
                         break;
                     }
 
@@ -94,10 +92,15 @@ namespace hw_azure_functions.Functions.Functions
                             totalTimeWorkedEntity.MinutesWorked += (int)timeMesure.TotalMinutes;
                             _ = await totalTimeWorkedTable.ExecuteAsync(TableOperation.Replace(totalTimeWorkedEntity));
                         }
+
+
+
                     }
                     i++;
                 }
             }
+
+
             string message = $"Total records consolidated {totalRecordsConsolidaded} at: {DateTime.UtcNow}.";
             log.LogInformation(message);
         }
