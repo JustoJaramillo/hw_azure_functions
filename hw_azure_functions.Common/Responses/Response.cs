@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace hw_azure_functions.Common.Responses
+﻿namespace hw_azure_functions.Common.Responses
 {
     public class Response
     {

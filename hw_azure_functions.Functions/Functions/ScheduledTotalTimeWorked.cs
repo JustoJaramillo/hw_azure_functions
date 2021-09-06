@@ -1,14 +1,11 @@
+using hw_azure_functions.Functions.Entities;
+using Microsoft.Azure.WebJobs;
+using Microsoft.Extensions.Logging;
+using Microsoft.WindowsAzure.Storage.Table;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using hw_azure_functions.Common.Responses;
-using hw_azure_functions.Functions.Entities;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.Azure.WebJobs;
-using Microsoft.Azure.WebJobs.Host;
-using Microsoft.Extensions.Logging;
-using Microsoft.WindowsAzure.Storage.Table;
 
 namespace hw_azure_functions.Functions.Functions
 {
@@ -16,7 +13,7 @@ namespace hw_azure_functions.Functions.Functions
     {
         [FunctionName("ScheduledTotalTimeWorked")]
         public static async Task Run(
-            [TimerTrigger("0 */60 * * * *")]TimerInfo myTimer,
+            [TimerTrigger("0 */60 * * * *")] TimerInfo myTimer,
             [Table("workinghours", Connection = "AzureWebJobsStorage")] CloudTable workingHoursTable,
             [Table("totaltimeworked", Connection = "AzureWebJobsStorage")] CloudTable totalTimeWorkedTable,
             ILogger log
@@ -24,17 +21,14 @@ namespace hw_azure_functions.Functions.Functions
         {
             log.LogInformation($"Consolidating functions executed at: {DateTime.UtcNow}.");
 
-
             string filterEmployees = TableQuery.GenerateFilterConditionForBool("Consolidated", QueryComparisons.Equal, false);
             TableQuery<WorkingHoursEntity> query = new TableQuery<WorkingHoursEntity>().Where(filterEmployees);
             TableQuerySegment<WorkingHoursEntity> entries = await workingHoursTable.ExecuteQuerySegmentedAsync(query, null);
             List<WorkingHoursEntity> orderedEntries = entries.OrderBy(x => x.EmployeeId).ThenBy(x => x.RecordDate).ToList();
 
-
             int totalRecordsConsolidaded = 0;
             if (orderedEntries.Count > 1)
             {
-
                 for (int i = 0; i < orderedEntries.Count;)
                 {
                     if (orderedEntries.Count == i + 1)
@@ -92,15 +86,10 @@ namespace hw_azure_functions.Functions.Functions
                             totalTimeWorkedEntity.MinutesWorked += (int)timeMesure.TotalMinutes;
                             _ = await totalTimeWorkedTable.ExecuteAsync(TableOperation.Replace(totalTimeWorkedEntity));
                         }
-
-
-
                     }
                     i++;
                 }
             }
-
-
             string message = $"Total records consolidated {totalRecordsConsolidaded} at: {DateTime.UtcNow}.";
             log.LogInformation(message);
         }

@@ -2,7 +2,6 @@ using hw_azure_functions.Common.Models;
 using hw_azure_functions.Common.Responses;
 using hw_azure_functions.Functions.Entities;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Http.Internal;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
@@ -29,7 +28,6 @@ namespace hw_azure_functions.Functions.Functions
             ILogger log)
         {
             log.LogInformation("New timestamp received.");
-
 
             string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
             WorkingHoursEntry workingHoursEntry = JsonConvert.DeserializeObject<WorkingHoursEntry>(requestBody);
@@ -161,7 +159,6 @@ namespace hw_azure_functions.Functions.Functions
         {
             log.LogInformation($"Get entry by id {id} received.");
 
-            
             TableOperation findOperantion = TableOperation.Retrieve<WorkingHoursEntity>("WORKINGHOURS", id);
             TableResult findResult = await workingHoursTable.ExecuteAsync(findOperantion);
 
@@ -174,7 +171,6 @@ namespace hw_azure_functions.Functions.Functions
                 });
             }
 
-
             string message = $"Entry id {id} Retrieved.";
             log.LogInformation(message);
 
@@ -185,8 +181,8 @@ namespace hw_azure_functions.Functions.Functions
                 Result = findResult.Result
             });
         }
-        
-        
+
+
 
 
         /*
@@ -258,17 +254,6 @@ namespace hw_azure_functions.Functions.Functions
             });
         }
 
-
-
-
-
-
-
-
-
-
-
-
         /*
          * Function consolidated
          */
@@ -281,30 +266,29 @@ namespace hw_azure_functions.Functions.Functions
         {
             log.LogInformation($"Consolidating functions executed at: {DateTime.UtcNow}.");
 
-
             string filterEmployees = TableQuery.GenerateFilterConditionForBool("Consolidated", QueryComparisons.Equal, false);
             TableQuery<WorkingHoursEntity> query = new TableQuery<WorkingHoursEntity>().Where(filterEmployees);
             TableQuerySegment<WorkingHoursEntity> entries = await workingHoursTable.ExecuteQuerySegmentedAsync(query, null);
             List<WorkingHoursEntity> orderedEntries = entries.OrderBy(x => x.EmployeeId).ThenBy(x => x.RecordDate).ToList();
 
-
             int totalRecordsConsolidaded = 0;
             if (orderedEntries.Count > 1)
             {
-                
+
                 for (int i = 0; i < orderedEntries.Count;)
                 {
-                    if (orderedEntries.Count == i+1)
+                    if (orderedEntries.Count == i + 1)
                     {
                         break;
                     }
 
-                    if (orderedEntries[i].RecordType == true && orderedEntries[i + 1].RecordType == false) {
+                    if (orderedEntries[i].RecordType == true && orderedEntries[i + 1].RecordType == false)
+                    {
                         i++;
                         continue;
                     }
 
-                        if (orderedEntries[i].EmployeeId == orderedEntries[i + 1].EmployeeId)
+                    if (orderedEntries[i].EmployeeId == orderedEntries[i + 1].EmployeeId)
                     {
                         totalRecordsConsolidaded++;
                         string filterEmployeeId = TableQuery.GenerateFilterConditionForInt("EmployeeId", QueryComparisons.Equal, orderedEntries[i].EmployeeId);
@@ -348,14 +332,10 @@ namespace hw_azure_functions.Functions.Functions
                             totalTimeWorkedEntity.MinutesWorked += (int)timeMesure.TotalMinutes;
                             _ = await totalTimeWorkedTable.ExecuteAsync(TableOperation.Replace(totalTimeWorkedEntity));
                         }
-
-
-
                     }
                     i++;
                 }
             }
-
 
             string message = $"Total records consolidated {totalRecordsConsolidaded} at: {DateTime.UtcNow}.";
             log.LogInformation(message);

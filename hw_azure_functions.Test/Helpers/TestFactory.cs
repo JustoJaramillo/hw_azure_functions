@@ -67,7 +67,7 @@ namespace hw_azure_functions.Test.Helpers
                 RowKey = Guid.NewGuid().ToString(),
                 EmployeeId = 1,
                 Date = DateTime.UtcNow,
-                MinutesWorked= 200
+                MinutesWorked = 200
             };
         }
         public static DefaultHttpRequest CreateHttpRequest(Guid EmployeeId, WorkingHoursEntry workingHoursEntryRequest)
@@ -156,5 +156,5 @@ namespace hw_azure_functions.Test.Helpers
         }
     }
 
-    
+
 }

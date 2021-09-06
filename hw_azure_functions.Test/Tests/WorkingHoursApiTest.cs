@@ -6,7 +6,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Internal;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using Microsoft.WindowsAzure.Storage.Table;
 using System;
 using Xunit;
 
@@ -37,7 +36,7 @@ namespace hw_azure_functions.Test.Tests
             MockCloudTableWorkingHoursEntity mockCloudTableWorkingHoursEntity = new MockCloudTableWorkingHoursEntity(new Uri("http://127.0.0.1:10002/devstoreaccount1/reports"));
             WorkingHoursEntry workingHoursEntry = TestFactory.GetWorkingHoursEntryRequest();
             Guid EmployeeId = Guid.NewGuid();
-            DefaultHttpRequest defaultHttpRequest = TestFactory.CreateHttpRequest(EmployeeId,workingHoursEntry);
+            DefaultHttpRequest defaultHttpRequest = TestFactory.CreateHttpRequest(EmployeeId, workingHoursEntry);
             //Act
             IActionResult response = await WorkingHoursApi.UpdateEntry(defaultHttpRequest, mockCloudTableWorkingHoursEntity, EmployeeId.ToString(), logger);
             //Assert
@@ -45,7 +44,7 @@ namespace hw_azure_functions.Test.Tests
             Assert.Equal(StatusCodes.Status200OK, okObjectResult.StatusCode);
         }
 
-        
+
         [Fact]
         public async void GetAllEntries_Should_Return_200()
         {
@@ -61,7 +60,7 @@ namespace hw_azure_functions.Test.Tests
             OkObjectResult okObjectResult = (OkObjectResult)response;
             Assert.Equal(StatusCodes.Status200OK, okObjectResult.StatusCode);
         }
-        
+
         [Fact]
         public async void GetEntryById_Should_Return_200()
         {
@@ -73,7 +72,7 @@ namespace hw_azure_functions.Test.Tests
 
 
             //Act
-            var response = await WorkingHoursApi.GetEntryById(defaultHttpRequest, mockCloudTableWorkingHoursEntity, EmployeeId.ToString(), logger);
+            IActionResult response = await WorkingHoursApi.GetEntryById(defaultHttpRequest, mockCloudTableWorkingHoursEntity, EmployeeId.ToString(), logger);
 
             //Assert
             OkObjectResult okObjectResult = (OkObjectResult)response;
