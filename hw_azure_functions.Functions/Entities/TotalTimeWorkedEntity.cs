@@ -5,7 +5,7 @@ using System.Text;
 
 namespace hw_azure_functions.Functions.Entities
 {
-    class TotalTimeWorkedEntity : TableEntity
+    public class TotalTimeWorkedEntity : TableEntity
     {
         public int EmployeeId { get; set; }
         public DateTime Date { get; set; }

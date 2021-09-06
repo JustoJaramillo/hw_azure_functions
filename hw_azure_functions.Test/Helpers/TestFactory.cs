@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Newtonsoft.Json;
 using System;
+using System.Collections.Generic;
 using System.IO;
 
 namespace hw_azure_functions.Test.Helpers
@@ -23,6 +24,50 @@ namespace hw_azure_functions.Test.Helpers
                 RecordDate = DateTime.UtcNow,
                 RecordType = false,
                 Consolidated = false
+            };
+        }
+
+        public static List<WorkingHoursEntity> GetListWorkingHoursEntity()
+        {
+            List<WorkingHoursEntity> list = new List<WorkingHoursEntity>();
+            WorkingHoursEntity workingHoursEntity = new WorkingHoursEntity
+            {
+                ETag = "*",
+                PartitionKey = "WORKINGHOURS",
+                RowKey = Guid.NewGuid().ToString(),
+                EmployeeId = 1,
+                RecordDate = DateTime.UtcNow,
+                RecordType = false,
+                Consolidated = false
+            };
+            list.Add(workingHoursEntity);
+            return list;
+        }
+        public static List<TotalTimeWorkedEntity> GetListTotalTimeWorkedEntity()
+        {
+            List<TotalTimeWorkedEntity> list = new List<TotalTimeWorkedEntity>();
+            TotalTimeWorkedEntity totalTimeWorkedEntity = new TotalTimeWorkedEntity
+            {
+                ETag = "*",
+                PartitionKey = "WORKINGHOURS",
+                RowKey = Guid.NewGuid().ToString(),
+                EmployeeId = 1,
+                Date = DateTime.UtcNow,
+                MinutesWorked = 200
+            };
+            list.Add(totalTimeWorkedEntity);
+            return list;
+        }
+        public static TotalTimeWorkedEntity GetTotalTimeWorkedEntity()
+        {
+            return new TotalTimeWorkedEntity
+            {
+                ETag = "*",
+                PartitionKey = "TOTALTIMEWORKED",
+                RowKey = Guid.NewGuid().ToString(),
+                EmployeeId = 1,
+                Date = DateTime.UtcNow,
+                MinutesWorked= 200
             };
         }
         public static DefaultHttpRequest CreateHttpRequest(Guid EmployeeId, WorkingHoursEntry workingHoursEntryRequest)
@@ -51,6 +96,14 @@ namespace hw_azure_functions.Test.Helpers
                 Body = GenerateStringFromString(request),
             };
         }
+        public static DefaultHttpRequest CreateHttpRequest(TotalTimeWorked totalTimeWorked)
+        {
+            string request = JsonConvert.SerializeObject(totalTimeWorked);
+            return new DefaultHttpRequest(new DefaultHttpContext())
+            {
+                Body = GenerateStringFromString(request),
+            };
+        }
 
         public static DefaultHttpRequest CreateHttpRequest()
         {
@@ -65,6 +118,16 @@ namespace hw_azure_functions.Test.Helpers
                 RecordDate = DateTime.UtcNow,
                 RecordType = false,
                 Consolidated = false
+            };
+        }
+
+        public static TotalTimeWorked GetTotalTimeWorkedRequest()
+        {
+            return new TotalTimeWorked
+            {
+                EmployeeId = 1,
+                Date = DateTime.UtcNow,
+                MinutesWorked = 200
             };
         }
 
@@ -92,4 +155,6 @@ namespace hw_azure_functions.Test.Helpers
             return logger;
         }
     }
+
+    
 }

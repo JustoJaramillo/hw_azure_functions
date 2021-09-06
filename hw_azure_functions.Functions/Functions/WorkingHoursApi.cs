@@ -2,6 +2,7 @@ using hw_azure_functions.Common.Models;
 using hw_azure_functions.Common.Responses;
 using hw_azure_functions.Functions.Entities;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Internal;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
@@ -120,6 +121,7 @@ namespace hw_azure_functions.Functions.Functions
             });
         }
 
+
         /*
          * Function to get all entries
          */
@@ -151,15 +153,19 @@ namespace hw_azure_functions.Functions.Functions
          * Function to get entry by Id
          */
         [FunctionName(nameof(GetEntryById))]
-        public static IActionResult GetEntryById(
+        public static async Task<IActionResult> GetEntryById(
             [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "entry/{id}")] HttpRequest req,
-            [Table("workinghours", "WORKINGHOURS", "{id}", Connection = "AzureWebJobsStorage")] WorkingHoursEntity workingHoursEntity,
+            [Table("workinghours", Connection = "AzureWebJobsStorage")] CloudTable workingHoursTable,
             string id,
             ILogger log)
         {
             log.LogInformation($"Get entry by id {id} received.");
 
-            if (workingHoursEntity == null)
+            
+            TableOperation findOperantion = TableOperation.Retrieve<WorkingHoursEntity>("WORKINGHOURS", id);
+            TableResult findResult = await workingHoursTable.ExecuteAsync(findOperantion);
+
+            if (findResult == null)
             {
                 return new BadRequestObjectResult(new Response
                 {
@@ -176,9 +182,11 @@ namespace hw_azure_functions.Functions.Functions
             {
                 IsSuccess = true,
                 Message = message,
-                Result = workingHoursEntity
+                Result = findResult.Result
             });
         }
+        
+        
 
 
         /*
@@ -236,6 +244,11 @@ namespace hw_azure_functions.Functions.Functions
 
             string message = "Retrieve all consolidate records.";
             log.LogInformation(message);
+
+            if (consolidate.Results.Count < 1)
+            {
+                message = $"No record founds for day {totalTimeWorked.Date}.";
+            }
 
             return new OkObjectResult(new Response
             {
